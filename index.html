@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CineMax Pro - Watch & Download HD Movies</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;900&display=swap');
+    body { background-color: #060911; color: #ffffff; font-family: 'Outfit', sans-serif; overflow-x: hidden; }
+    .glass-nav { background: rgba(6, 9, 17, 0.88); backdrop-filter: blur(16px); }
+    .movie-card { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+    .movie-card:hover { transform: translateY(-6px); box-shadow: 0 15px 30px -10px rgba(220, 38, 38, 0.35); }
+    .movie-card:hover img { transform: scale(1.08); }
+    .hero-grad { background: linear-gradient(to top, #060911 10%, rgba(6, 9, 17, 0.65) 55%, rgba(6, 9, 17, 0.25) 100%); }
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-thumb { background: #dc2626; border-radius: 10px; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+  <!-- TOP NAVBAR -->
+  <nav class="sticky top-0 z-40 glass-nav border-b border-white/10 px-4 sm:px-8 py-3.5 flex items-center justify-between">
+    <div class="flex items-center gap-2.5 cursor-pointer" onclick="window.scrollTo({top:0, behavior:'smooth'})">
+      <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-red-600 to-red-800 flex items-center justify-center shadow-lg shadow-red-600/30">
+        <i class="fa-solid fa-play text-white text-sm ml-0.5"></i>
+      </div>
+      <span class="text-xl sm:text-2xl font-black tracking-wider">CINE<span class="text-red-600">MAX</span></span>
+    </div>
+
+    <!-- Search Bar -->
+    <div class="relative w-48 sm:w-72">
+      <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
+      <input id="searchInput" oninput="filterMovies()" type="text" placeholder="Search movies..." 
+        class="w-full bg-white/5 border border-white/10 text-xs sm:text-sm rounded-full pl-9 pr-4 py-2 text-white placeholder-gray-400 focus:outline-none focus:border-red-600 focus:bg-white/10 transition">
+    </div>
+  </nav>
+
+  <!-- HERO BANNER (Shows Latest Uploaded Movie Automatically) -->
+  <section id="heroBanner" class="relative w-full h-[320px] sm:h-[420px] bg-gray-950 overflow-hidden hidden">
+    <img id="heroImg" src="" alt="Featured" class="w-full h-full object-cover object-center opacity-55 scale-105 blur-[1px]">
+    <div class="absolute inset-0 hero-grad flex flex-col justify-end p-5 sm:p-10 max-w-7xl mx-auto">
+      <div class="flex items-center gap-2 mb-2">
+        <span class="bg-red-600 text-white text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full tracking-wider">
+          <i class="fa-solid fa-fire mr-1"></i> New Release
+        </span>
+        <span id="heroCat" class="bg-white/10 backdrop-blur-md text-gray-200 text-[10px] font-bold px-2.5 py-0.5 rounded-full border border-white/10">South Hindi</span>
+        <span class="bg-yellow-500/20 text-yellow-400 text-[10px] font-bold px-2 py-0.5 rounded border border-yellow-500/30">1080p HD</span>
+      </div>
+      <h1 id="heroTitle" class="text-2xl sm:text-4xl md:text-5xl font-black tracking-tight max-w-2xl line-clamp-2 mb-4 drop-shadow-lg">Movie Title</h1>
+      <div class="flex items-center gap-3">
+        <button id="heroPlayBtn" class="bg-red-600 hover:bg-red-700 text-white font-bold text-xs sm:text-sm px-6 py-3 rounded-xl flex items-center gap-2 shadow-lg shadow-red-600/40 transition active:scale-95">
+          <i class="fa-solid fa-play"></i> Watch Now
+        </button>
+        <a id="heroDownloadBtn" href="#" target="_blank" download class="bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/15 text-white font-semibold text-xs sm:text-sm px-5 py-3 rounded-xl flex items-center gap-2 transition">
+          <i class="fa-solid fa-download"></i> Download
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- CATEGORY FILTER BUTTONS -->
+  <div class="max-w-7xl mx-auto w-full px-4 sm:px-8 pt-5 pb-2">
+    <div class="flex items-center gap-2 overflow-x-auto pb-2 text-xs sm:text-sm">
+      <button onclick="setCategory('All', this)" class="cat-btn bg-red-600 text-white px-4 py-2 rounded-xl font-bold shadow-md shadow-red-600/25 whitespace-nowrap transition">
+        <i class="fa-solid fa-border-all mr-1"></i> All Movies
+      </button>
+      <button onclick="setCategory('South Hindi', this)" class="cat-btn bg-white/5 hover:bg-white/10 text-gray-300 border border-white/10 px-4 py-2 rounded-xl font-semibold whitespace-nowrap transition">
+        South Hindi
+      </button>
+      <button onclick="setCategory('Bollywood', this)" class="cat-btn bg-white/5 hover:bg-white/10 text-gray-300 border border-white/10 px-4 py-2 rounded-xl font-semibold whitespace-nowrap transition">
+        Bollywood
+      </button>
+      <button onclick="setCategory('Hollywood', this)" class="cat-btn bg-white/5 hover:bg-white/10 text-gray-300 border border-white/10 px-4 py-2 rounded-xl font-semibold whitespace-nowrap transition">
+        Hollywood
+      </button>
+      <button onclick="setCategory('Animation', this)" class="cat-btn bg-white/5 hover:bg-white/10 text-gray-300 border border-white/10 px-4 py-2 rounded-xl font-semibold whitespace-nowrap transition">
+        Animation
+      </button>
+    </div>
+  </div>
+
+  <!-- MOVIES LIST GRID -->
+  <main class="flex-1 px-4 sm:px-8 py-4 max-w-7xl mx-auto w-full">
+    <div class="flex items-center justify-between mb-4">
+      <h2 id="sectionHeading" class="text-base sm:text-lg font-extrabold flex items-center gap-2">
+        <span class="w-1.5 h-5 bg-red-600 rounded-full inline-block"></span> Latest Movies
+      </h2>
+      <span id="movieCount" class="text-xs text-gray-400 font-medium"></span>
+    </div>
+
+    <div id="loadingBox" class="text-center py-24 text-gray-400">
+      <div class="w-12 h-12 border-4 border-red-600 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+      <p class="text-sm font-medium">Loading HD Movies...</p>
+    </div>
+
+    <div id="moviesGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-5 hidden"></div>
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="border-t border-white/10 py-6 text-center text-xs text-gray-500 mt-10">
+    <p class="font-bold text-gray-400 mb-1">CINEMAX PRO HD</p>
+    <p>Free Online Movie Streaming & High-Speed Downloads</p>
+  </footer>
+
+  <!-- VIDEO PLAYER POPUP MODAL -->
+  <div id="playerModal" class="fixed inset-0 z-50 bg-black/95 backdrop-blur-md hidden flex-col justify-center items-center p-2 sm:p-4">
+    <div class="w-full max-w-4xl bg-[#0d1322] rounded-2xl overflow-hidden border border-white/15 shadow-2xl">
+      <div class="flex justify-between items-center px-4 py-3 bg-black/60 border-b border-white/10">
+        <div class="flex items-center gap-2 truncate pr-3">
+          <span class="w-2.5 h-2.5 rounded-full bg-red-600 animate-pulse"></span>
+          <h3 id="playerTitle" class="font-bold text-sm sm:text-base truncate">Playing Movie</h3>
+        </div>
+        <div class="flex items-center gap-2.5">
+          <a id="downloadBtn" href="#" target="_blank" download class="bg-red-600 hover:bg-red-700 text-white text-xs font-bold px-3.5 py-1.5 rounded-lg flex items-center gap-1.5 shadow-md transition">
+            <i class="fa-solid fa-download"></i> Download
+          </a>
+          <button onclick="closePlayer()" class="w-8 h-8 rounded-lg bg-white/10 hover:bg-red-600 text-gray-300 hover:text-white flex items-center justify-center transition">
+            <i class="fa-solid fa-xmark text-lg"></i>
+          </button>
+        </div>
+      </div>
+      <div id="playerBox" class="aspect-video bg-black w-full flex items-center justify-center"></div>
+    </div>
+  </div>
+
+  <script>
+    const SUPABASE_URL = "https://usfbydecsqlirmlipboh.supabase.co";
+    const SUPABASE_KEY = "sb_publishable_5Soi8PsOJOyfiPfD3Reemg_h3-PFqjQ";
+    const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    let moviesData = [];
+    let activeCategory = 'All';
+
+    window.onload = loadMovies;
+
+    async function loadMovies() {
+      const { data, error } = await db
+        .from('movies')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      document.getElementById('loadingBox').classList.add('hidden');
+      const grid = document.getElementById('moviesGrid');
+      grid.classList.remove('hidden');
+
+      if (error) {
+        grid.innerHTML = `<p class="col-span-full text-center text-red-400 py-12 text-sm">Database connect nahi hua. Kripya Supabase me 'movies' table check karein.</p>`;
+        return;
+      }
+
+      moviesData = data || [];
+      if (moviesData.length > 0) {
+        setupHeroBanner(moviesData[0]);
+      }
+      renderGrid(moviesData);
+    }
+
+    function setupHeroBanner(latest) {
+      const hero = document.getElementById('heroBanner');
+      hero.classList.remove('hidden');
+      document.getElementById('heroImg').src = latest.thumbnail_url;
+      document.getElementById('heroTitle').innerText = latest.title;
+      document.getElementById('heroCat').innerText = latest.category || 'Featured';
+      document.getElementById('heroDownloadBtn').href = latest.video_url;
+      document.getElementById('heroPlayBtn').onclick = () => openPlayer(encodeURIComponent(latest.title), encodeURIComponent(latest.video_url));
+    }
+
+    function renderGrid(list) {
+      const grid = document.getElementById('moviesGrid');
+      document.getElementById('movieCount').innerText = `${list.length} Movies`;
+
+      if (list.length === 0) {
+        grid.innerHTML = `
+          <div class="col-span-full text-center py-20 text-gray-500">
+            <i class="fa-solid fa-film text-4xl mb-3 opacity-40"></i>
+            <p class="text-sm">Abhi koi movie upload nahi hui hai.</p>
+          </div>`;
+        return;
+      }
+
+      grid.innerHTML = list.map(m => `
+        <div onclick="openPlayer('${encodeURIComponent(m.title)}', '${encodeURIComponent(m.video_url)}')" 
+          class="movie-card bg-[#0f1626] rounded-2xl overflow-hidden border border-white/10 cursor-pointer group flex flex-col">
+          <div class="relative aspect-[2/3] bg-gray-950 overflow-hidden">
+            <img src="${m.thumbnail_url}" alt="${m.title}" class="w-full h-full object-cover transition duration-500" loading="lazy">
+            <span class="absolute top-2.5 left-2.5 bg-red-600/95 backdrop-blur-md text-[10px] font-extrabold px-2.5 py-0.5 rounded-md shadow">
+              ${m.category || 'HD'}
+            </span>
+            <span class="absolute top-2.5 right-2.5 bg-black/75 backdrop-blur-md text-yellow-400 border border-yellow-500/30 text-[10px] font-bold px-1.5 py-0.5 rounded">
+              HD
+            </span>
+            <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center transition-all duration-300">
+              <div class="w-12 h-12 rounded-full bg-red-600 flex items-center justify-center shadow-lg shadow-red-600/50 transform scale-90 group-hover:scale-100 transition">
+                <i class="fa-solid fa-play text-white ml-0.5 text-lg"></i>
+              </div>
+              <span class="text-[11px] font-bold text-white mt-2 tracking-wide uppercase">Watch Now</span>
+            </div>
+          </div>
+          <div class="p-3 flex-1 flex flex-col justify-between">
+            <h4 class="font-bold text-xs sm:text-sm text-gray-100 line-clamp-1 group-hover:text-red-500 transition">${m.title}</h4>
+            <div class="flex items-center justify-between mt-2 pt-2 border-t border-white/5 text-[11px] text-gray-400">
+              <span><i class="fa-solid fa-circle-play text-red-500 mr-1"></i> Watch</span>
+              <span><i class="fa-solid fa-download text-green-400 mr-1"></i> Download</span>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function openPlayer(title, url) {
+      const cleanTitle = decodeURIComponent(title);
+      const videoUrl = decodeURIComponent(url);
+
+      document.getElementById('playerTitle').innerText = cleanTitle;
+      document.getElementById('downloadBtn').href = videoUrl;
+      document.getElementById('playerBox').innerHTML = `
+        <video src="${videoUrl}" controls autoplay playsinline class="w-full h-full max-h-[80vh] outline-none"></video>
+      `;
+      document.getElementById('playerModal').classList.remove('hidden');
+      document.getElementById('playerModal').classList.add('flex');
+    }
+
+    function closePlayer() {
+      document.getElementById('playerBox').innerHTML = "";
+      document.getElementById('playerModal').classList.add('hidden');
+      document.getElementById('playerModal').classList.remove('flex');
+    }
+
+    function setCategory(cat, btnEl) {
+      activeCategory = cat;
+      document.getElementById('sectionHeading').innerHTML = `<span class="w-1.5 h-5 bg-red-600 rounded-full inline-block"></span> ${cat === 'All' ? 'Latest Movies' : cat}`;
+      document.querySelectorAll('.cat-btn').forEach(b => {
+        b.className = "cat-btn bg-white/5 hover:bg-white/10 text-gray-300 border border-white/10 px-4 py-2 rounded-xl font-semibold whitespace-nowrap transition";
+      });
+      if (btnEl) {
+        btnEl.className = "cat-btn bg-red-600 text-white px-4 py-2 rounded-xl font-bold shadow-md shadow-red-600/25 whitespace-nowrap transition";
+      }
+      filterMovies();
+    }
+
+    function filterMovies() {
+      const q = document.getElementById('searchInput').value.toLowerCase();
+      const filtered = moviesData.filter(m => {
+        const cMatch = activeCategory === 'All' || m.category === activeCategory;
+        const sMatch = m.title.toLowerCase().includes(q);
+        return cMatch && sMatch;
+      });
+      renderGrid(filtered);
+    }
+  </script>
+</body>
+</html>
